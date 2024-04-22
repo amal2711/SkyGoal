@@ -1,0 +1,13 @@
+{
+  "namespace": "com.skygoal.sports",
+  "type": "record",
+  "name": "FootballMatch",
+  "fields": [
+    {"name": "matchId", "type": "string"},
+    {"name": "teamA", "type": "string"},
+    {"name": "teamB", "type": "string"},
+    {"name": "scoreA", "type": "int"},
+    {"name": "scoreB", "type": "int"},
+    {"name": "timestamp", "type": "long"}
+  ]
+}
