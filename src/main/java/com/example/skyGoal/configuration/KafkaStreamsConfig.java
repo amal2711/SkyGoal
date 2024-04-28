@@ -27,6 +27,8 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
+import java.util.UUID;
+
 import static org.slf4j.LoggerFactory.*;
 
 @Configuration
@@ -43,23 +45,12 @@ public class KafkaStreamsConfig {
     @Value("${spring.kafka.bootstrap-servers}")
     private String bootstrapServers;
 
-    @Value("${app.match-duration-minutes:90}")
-    private long matchDurationMinutes;
-
-    private <T> ConsumerFactory<String, T> consumerFactory(Class<T> type) {
-        Map<String, Object> props = new HashMap<>();
-        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-        props.put(ConsumerConfig.GROUP_ID_CONFIG, "skygoal-consumer-group");
-        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-        return new DefaultKafkaConsumerFactory<>(props);
-    }
 
     @Bean
     public KafkaStreams kafkaStreams() {
         Properties props = new Properties();
         props.put(StreamsConfig.APPLICATION_ID_CONFIG, "skygoal-streams");
+        props.put(StreamsConfig.STATE_DIR_CONFIG, "/tmp/kafka-streams/skygoal-streams-" + UUID.randomUUID().toString());
         props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
         props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
@@ -138,32 +129,4 @@ private void defineStreams(StreamsBuilder builder) {
         }
     }
 
-
-    @Bean
-    public ConcurrentKafkaListenerContainerFactory<String, WeatherData> weatherKafkaListenerContainerFactory() {
-        return createFactory(WeatherData.class);
-    }
-
-    @Bean
-    public ConcurrentKafkaListenerContainerFactory<String, FootballMatch> footballMatchKafkaListenerContainerFactory() {
-        return createFactory(FootballMatch.class);
-    }
-
-    private <T> ConcurrentKafkaListenerContainerFactory<String, T> createFactory(Class<T> clazz) {
-        ConcurrentKafkaListenerContainerFactory<String, T> factory = new ConcurrentKafkaListenerContainerFactory<>();
-        factory.setConsumerFactory(consumerFactory(clazz));
-        return factory;
-    }
-
-    @KafkaListener(topics = "weather-data", containerFactory = "weatherKafkaListenerContainerFactory")
-    public void consumeWeatherData(WeatherData data) {
-        logger.info("Received Weather Data: {}", data);
-        weatherDataRepository.save(data);
-    }
-
-    @KafkaListener(topics = "football-matches", containerFactory = "footballMatchKafkaListenerContainerFactory")
-    public void consumeFootballMatch(FootballMatch match) {
-        logger.info("Received Football Match: {}", match);
-        footballMatchRepository.save(match);
-    }
 }
