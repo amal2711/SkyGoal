@@ -10,9 +10,7 @@ import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
-import org.apache.kafka.streams.kstream.KStream;
-import org.apache.kafka.streams.kstream.Materialized;
-import org.apache.kafka.streams.kstream.TimeWindows;
+import org.apache.kafka.streams.kstream.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,16 +21,18 @@ import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
+import org.springframework.kafka.support.serializer.JsonSerde;
 
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
+import static org.slf4j.LoggerFactory.*;
 
 @Configuration
 public class KafkaStreamsConfig {
 
-    private static final Logger logger = LoggerFactory.getLogger(KafkaStreamsConfig.class);
+    private static final Logger logger = getLogger(KafkaStreamsConfig.class);
 
     @Autowired
     private WeatherDataRepository weatherDataRepository;
@@ -73,34 +73,71 @@ public class KafkaStreamsConfig {
         return streams;
     }
 
-    private void defineStreams(StreamsBuilder builder) {
-        KStream<String, WeatherData> weatherStream = builder.stream("weather-data");
-        KStream<String, FootballMatch> matchStream = builder.stream("football-matches");
+//    private void defineStreams(StreamsBuilder builder) {
+//        KStream<String, WeatherData> weatherStream = builder.stream("weather-data");
+//        KStream<String, FootballMatch> matchStream = builder.stream("football-matches");
+//
+//        // Total goals scored per match
+//        matchStream.groupByKey()
+//                .aggregate(() -> 0, (key, match, aggregate) -> aggregate + match.getScoreA() + match.getScoreB(), Materialized.with(Serdes.String(), Serdes.Integer()))
+//                .toStream()
+//                .foreach((key, value) -> logger.info("Total goals scored in match {}: {}", key, value));
+//
+//        // Goal difference per match
+//        matchStream.foreach((key, match) -> {
+//            int goalDifference = Math.abs(match.getScoreA() - match.getScoreB());
+//            logger.info("Goal difference in match {}: {}", key, goalDifference);
+//        });
+//
+//        // Average temperature during matches
+//        weatherStream.groupByKey()
+//                .windowedBy(TimeWindows.of(Duration.ofMinutes(matchDurationMinutes)))
+//                .aggregate(
+//                        () -> 0.0f,
+//                        (key, weather, sum) -> sum + weather.getTemperature(),
+//                        Materialized.with(Serdes.String(), Serdes.Float())
+//                )
+//                .toStream()
+//                .mapValues((windowedKey, tempSum) -> tempSum / matchDurationMinutes)
+//                .foreach((key, avgTemp) -> logger.info("Average temperature during match from {} to {}: {}", key.window().startTime(), key.window().endTime(), avgTemp));
+//    }
+private void defineStreams(StreamsBuilder builder) {
+    KStream<String, WeatherData> weatherStream = builder.stream("weather-data",
+            Consumed.with(Serdes.String(), new JsonSerde<>(WeatherData.class)));
 
-        // Total goals scored per match
-        matchStream.groupByKey()
-                .aggregate(() -> 0, (key, match, aggregate) -> aggregate + match.getScoreA() + match.getScoreB(), Materialized.with(Serdes.String(), Serdes.Integer()))
-                .toStream()
-                .foreach((key, value) -> logger.info("Total goals scored in match {}: {}", key, value));
+    KStream<String, FootballMatch> matchStream = builder.stream("football-matches",
+            Consumed.with(Serdes.String(), new JsonSerde<>(FootballMatch.class)));
 
-        // Goal difference per match
-        matchStream.foreach((key, match) -> {
-            int goalDifference = Math.abs(match.getScoreA() - match.getScoreB());
-            logger.info("Goal difference in match {}: {}", key, goalDifference);
-        });
+    // Join the weather and match streams based on the timestamps
+    matchStream.join(weatherStream,
+                    this::matchWeatherJoiner, // Implementieren Sie eine Join-Funktion
+                    JoinWindows.of(Duration.ofHours(2)), // Zeitfenster von +/- 2 Stunden um die Match-Zeit
+                    StreamJoined.with(
+                            Serdes.String(),
+                            new JsonSerde<>(FootballMatch.class),
+                            new JsonSerde<>(WeatherData.class))
+            )
+            // Nehmen Sie hier weitere Transformationen vor, z.B. Aggregation
+            // ...
+            .to("aggregated-match-weather", Produced.with(Serdes.String(), new JsonSerde<>(AggregatedMatchWeatherData.class)));
+}
 
-        // Average temperature during matches
-        weatherStream.groupByKey()
-                .windowedBy(TimeWindows.of(Duration.ofMinutes(matchDurationMinutes)))
-                .aggregate(
-                        () -> 0.0f,
-                        (key, weather, sum) -> sum + weather.getTemperature(),
-                        Materialized.with(Serdes.String(), Serdes.Float())
-                )
-                .toStream()
-                .mapValues((windowedKey, tempSum) -> tempSum / matchDurationMinutes)
-                .foreach((key, avgTemp) -> logger.info("Average temperature during match from {} to {}: {}", key.window().startTime(), key.window().endTime(), avgTemp));
+    private AggregatedMatchWeatherData matchWeatherJoiner(FootballMatch match, WeatherData weather) {
+        // Prüfen, ob der Wetterdaten-Zeitstempel mit dem Match-Zeitstempel innerhalb eines bestimmten Zeitfensters übereinstimmt
+        // Hier ist angenommen, dass das Match und das Wetter das gleiche Format für Zeitstempel verwenden und beide in Millisekunden seit Epoche (UTC) sind
+        long matchTime = match.getTimestamp();
+        long weatherTime = weather.getTimestamp();
+        long timeDifference = Math.abs(matchTime - weatherTime);
+
+        // Wenn das Wetter innerhalb von +/- 2 Stunden des Matches liegt, dann fassen wir es zusammen
+        if (timeDifference <= Duration.ofHours(2).toMillis()) {
+            return new AggregatedMatchWeatherData(match, weather);
+        } else {
+            // Wenn nicht, dann ignorieren oder handhaben Sie diesen Fall entsprechend
+            return null; // oder eine neue Instanz von AggregatedMatchWeatherData mit default Werten
+        }
     }
+
 
     @Bean
     public ConcurrentKafkaListenerContainerFactory<String, WeatherData> weatherKafkaListenerContainerFactory() {
