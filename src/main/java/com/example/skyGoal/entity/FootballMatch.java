@@ -17,4 +17,5 @@ public class FootballMatch {
     private int scoreA;
     private int scoreB;
     private long timestamp;
+    private String location;
 }
