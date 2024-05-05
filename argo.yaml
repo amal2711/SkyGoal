@@ -1,0 +1,18 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: skygoal
+  namespace: argocd
+spec:
+  destination:
+    namespace: default
+    server: https://kubernetes.default.svc
+  source:
+    path: path/to/manifests
+    repoURL: 'http://localhost:3000/amal/skygoal'
+    targetRevision: HEAD
+  project: default
+  syncPolicy:
+    automated:
+      selfHeal: true
+      prune: true
