@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: skogoal-deployment
+  labels:
+    app: skygoal
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: skygoal
+  template:
+    metadata:
+      labels:
+        app: skygoal
+    spec:
+      containers:
+        - name: skygoal
+          image: skygoal:tag
+          ports:
+            - containerPort: 80
