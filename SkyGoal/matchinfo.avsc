@@ -1,5 +1,5 @@
 {
-  "namespace": "com.skygoal.sports",
+  "namespace": "com.skygoal.entity",
   "type": "record",
   "name": "FootballMatch",
   "fields": [

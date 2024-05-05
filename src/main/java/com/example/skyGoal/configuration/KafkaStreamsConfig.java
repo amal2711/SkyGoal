@@ -1,5 +1,6 @@
 package com.example.skyGoal.configuration;
 
+import com.example.skyGoal.entity.AggregatedMatchWeatherData;
 import com.example.skyGoal.entity.FootballMatch;
 import com.example.skyGoal.entity.WeatherData;
 import io.confluent.kafka.serializers.KafkaAvroSerializer;
@@ -41,7 +42,10 @@ public class KafkaStreamsConfig {
         configProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
         configProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, KafkaAvroSerializer.class);
         configProps.put("schema.registry.url", schemaRegistryUrl);
-
+        configProps.put(ProducerConfig.CLIENT_ID_CONFIG, "client-id");
+        configProps.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, "true");
+        configProps.put(ProducerConfig.ACKS_CONFIG, "all");
+        configProps.put(ProducerConfig.RETRIES_CONFIG, Integer.MAX_VALUE);
         return new DefaultKafkaProducerFactory<>(configProps);
     }
     @Bean

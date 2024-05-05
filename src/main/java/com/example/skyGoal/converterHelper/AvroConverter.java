@@ -6,6 +6,8 @@ import org.apache.avro.generic.GenericRecord;
 import com.example.skyGoal.entity.FootballMatch;
 import com.example.skyGoal.entity.WeatherData;
 
+import java.time.ZoneId;
+
 public class AvroConverter {
 
     private static final String WEATHER_SCHEMA_STRING = "{\"namespace\": \"com.skygoal.weather\", \"type\": \"record\", \"name\": \"WeatherData\", \"fields\": [{\"name\": \"location\", \"type\": \"string\"}, {\"name\": \"temperature\", \"type\": \"float\"}, {\"name\": \"humidity\", \"type\": \"float\"}, {\"name\": \"windSpeed\", \"type\": \"float\"}, {\"name\": \"timestamp\", \"type\": \"long\"}]}";
@@ -20,7 +22,7 @@ public class AvroConverter {
         avroRecord.put("temperature", weatherData.getTemperature());
         avroRecord.put("humidity", weatherData.getHumidity());
         avroRecord.put("windSpeed", weatherData.getWindSpeed());
-        avroRecord.put("timestamp", weatherData.getTimestamp());
+        avroRecord.put("timestamp", weatherData.getTimestamp().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli());
         return avroRecord;
     }
 
@@ -32,7 +34,7 @@ public class AvroConverter {
         avroRecord.put("scoreA", footballMatch.getScoreA());
         avroRecord.put("scoreB", footballMatch.getScoreB());
         avroRecord.put("matchMinute", footballMatch.getMatchMinute());
-        avroRecord.put("timestamp", footballMatch.getTimestamp());
+        avroRecord.put("timestamp", footballMatch.getTimestamp().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli());  // Ensure this conversion is correct
         avroRecord.put("location", footballMatch.getLocation());
         return avroRecord;
     }

@@ -45,8 +45,8 @@ services:
       ports:
         - "5432:5432"
       environment:
-        POSTGRES_PASSWORD: sky
-        POSTGRES_USER: sky
+        POSTGRES_PASSWORD: postgres
+        POSTGRES_USER: postgres
         POSTGRES_DB: skyGoal
       restart: unless-stopped
       volumes:

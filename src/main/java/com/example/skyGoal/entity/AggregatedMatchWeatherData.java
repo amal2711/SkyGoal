@@ -1,22 +1,26 @@
-package com.example.skyGoal.configuration;
+package com.example.skyGoal.entity;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 import org.apache.avro.Schema;
-import org.apache.avro.generic.GenericData;
 import org.apache.avro.specific.SpecificRecordBase;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 
+@Entity
+@Table(name = "aggregated_match_weather_data")
 @NoArgsConstructor  // No-argument constructor for deserialization
 @AllArgsConstructor // All-argument constructor for easy creation
 @Getter
 @Setter
 public class AggregatedMatchWeatherData extends SpecificRecordBase {
+    @Id
     private String matchId;
     private String competitionName;
     private String teamA;
@@ -27,7 +31,7 @@ public class AggregatedMatchWeatherData extends SpecificRecordBase {
     private String matchTime;
     private Integer matchMinute;
 
-    private static final Schema SCHEMA = new Schema.Parser().parse("{\"namespace\": \"com.skygoal.sports\", \"type\": \"record\", \"name\": \"AggregatedMatchWeatherData\", \"fields\": [{\"name\": \"matchId\", \"type\": \"string\"}, {\"name\": \"competitionName\", \"type\": \"string\"}, {\"name\": \"teamA\", \"type\": \"string\"}, {\"name\": \"teamB\", \"type\": \"string\"}, {\"name\": \"scoreA\", \"type\": \"int\"}, {\"name\": \"scoreB\", \"type\": \"int\"}, {\"name\": \"temperature\", \"type\": \"float\"}, {\"name\": \"matchTime\", \"type\": \"string\"}, {\"name\": \"matchMinute\", \"type\": \"int\"}]}");
+    private static final Schema SCHEMA = new Schema.Parser().parse("{\"namespace\": \"com.skygoal.entity\", \"type\": \"record\", \"name\": \"AggregatedMatchWeatherData\", \"fields\": [{\"name\": \"matchId\", \"type\": \"string\"}, {\"name\": \"competitionName\", \"type\": \"string\"}, {\"name\": \"teamA\", \"type\": \"string\"}, {\"name\": \"teamB\", \"type\": \"string\"}, {\"name\": \"scoreA\", \"type\": \"int\"}, {\"name\": \"scoreB\", \"type\": \"int\"}, {\"name\": \"temperature\", \"type\": \"float\"}, {\"name\": \"matchTime\", \"type\": \"string\"}, {\"name\": \"matchMinute\", \"type\": \"int\"}]}");
 
     @Override
     public void put(int i, Object v) {
@@ -67,8 +71,8 @@ public class AggregatedMatchWeatherData extends SpecificRecordBase {
         return SCHEMA;
     }
 
-    public static String formatTimestamp(long timestamp) {
-        LocalDateTime dateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(timestamp), ZoneId.of("UTC"));
-        return dateTime.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+    public static String formatTimestamp(LocalDateTime timestamp) {
+        return timestamp.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
     }
+
 }
